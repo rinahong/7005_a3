@@ -6,24 +6,73 @@ Transmitter with UDP:
 """
 
 import socket
+import select
 
-TRANS_IP = ''                                # '' to set the default IP to localhost
-TRANS_PORT = 7005                            # Initial port
+TRANS_IP = '192.168.0.4'
+TRANS_PORT = 7005
+WINDOW_SIZE = 5
 
-sobj = socket.socket(AF_INET, SOCK_STREAM)   # Create a UDP socket object
+timeout = 10
+packets = {}
 
-def file_transfer():
-    print "Transmitter ip: ", TRANS_IP
-    print "Transmitter port: ", TRANS_PORT
+sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)   # Create a UDP socket object
+
+def transfer_file():
+    seq_num = 1
+    file_name = 'test'
     file = open(file_name,'rb')
-    data = file.read(1024)
-    while (data):
-        data = file.read(1024)
-        sobj.sendto(data, (TRANS_IP, TRANS_PORT))
-        # TODO: tracking SEQ and ACKs
+    data = file.read(20)
 
-    # necessary??
+    print ("===============start===============")
+
+    while (sobj):
+        readable, writable, exceptional = select.select([sobj],[sobj],[], timeout)
+        received_ack = ''
+        if readable:
+            #print("readable:=======================================  " )
+            # TODO: tracking ACKs and timeout
+
+            #if expected ACK returend
+            recv_packet = receive_packet()
+            if recv_packet:
+                received_ack = recv_packet.decode()
+                if received_ack == 'fin':
+                    break
+
+        if writable:
+            if received_ack:
+                # print('all packets', packets)
+                # print('received_ack', received_ack)
+                packets.pop(int(received_ack))
+
+            while(data and len(packets) < WINDOW_SIZE): #Wait for ACKs from receiver when sending maximum packets
+                packet = str(seq_num).encode() + b';' + data
+                packets[seq_num] = packet
+                send_packet(packet)
+                data = file.read(20)
+                seq_num = seq_num + 1
+
+                #timeout for ACK
+
+            if not data:
+                send_packet('fin'.encode())
+
+
+
+    print("------DONE------")
     file.close()
     sobj.close()
 
-print("------DONE------")
+def check_timeout(packet):
+    sobj.sendto(packet, (TRANS_IP, TRANS_PORT))
+    print ("Packet sent: " + packet.decode())
+
+def send_packet(packet):
+    sobj.sendto(packet, (TRANS_IP, TRANS_PORT))
+    #print ("Packet sent: " + packet.decode())
+
+def receive_packet(): #for receiving a pkt from server
+    return sobj.recv(300)
+
+if __name__ == '__main__':
+    transfer_file()
