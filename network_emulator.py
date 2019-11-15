@@ -12,26 +12,41 @@ import select
 # This should come from user input.
 error_rate = 10
 
-TRANS_IP = '192.168.0.3'
-TRANS_PORT = 7005
+RECV_ADDRESS = ('192.168.0.16', 7006)
+PORT_NUMBER = 7005
 
 def emulate_network():
     sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      # Create a UDP socket object
-    sobj.bind(('', TRANS_PORT))
-    packet = ''
+    sobj.bind(('', PORT_NUMBER))
 
-    while True:
+    transmitter_EOT = False
+    receiver_EOT = False
+
+    while not transmitter_EOT or not receiver_EOT :
         readable, writable, exceptional = select.select([sobj], [sobj], [])
+        packet_type = ''
+        packet = ''
 
         if readable:
             packet, address = sobj.recvfrom(1024)   # buffer size is 1024 bytes from transmitter
+            packet_type = packet.decode().split(';')[0]
+            print("readable address", address)
+
+            #TODO refactor this....
+            if packet_type == 'SEQ':
+                transmitter_address = address
+                if packet.decode().split(';')[1] == 'fin':
+                    transmitter_EOT = True
+            elif packet_type == 'ACK':
+                if packet.decode().split(';')[1] == 'fin':
+                    receiver_EOT = True
 
         if writable:
-            # if address is from transmitter
-                # randomly discard per error rate
-                # sobj.sendto(packet, receiver_address)
-            # else if address is from receiver
-                # sobj.sendto(packet, transmitter_address)
+            if packet_type == 'SEQ':
+                # TODO randomly discard per error rate
+                sobj.sendto(packet, RECV_ADDRESS)
+            elif packet_type == 'ACK':
+                sobj.sendto(packet, transmitter_address)
 
     sobj.close()
 

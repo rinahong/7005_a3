@@ -8,7 +8,7 @@ Transmitter with UDP:
 import socket
 import select
 
-TRANS_IP = '192.168.0.4'
+TRANS_IP = '192.168.0.15'
 TRANS_PORT = 7005
 WINDOW_SIZE = 5
 
@@ -20,6 +20,7 @@ sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)   # Create a UDP socket 
 def transfer_file():
     seq_num = 1
     file_name = 'test'
+
     file = open(file_name,'rb')
     data = file.read(20)
 
@@ -29,24 +30,21 @@ def transfer_file():
         readable, writable, exceptional = select.select([sobj],[sobj],[], timeout)
         received_ack = ''
         if readable:
-            #print("readable:=======================================  " )
             # TODO: tracking ACKs and timeout
 
             #if expected ACK returend
             recv_packet = receive_packet()
             if recv_packet:
-                received_ack = recv_packet.decode()
-                if received_ack == 'fin':
+                received_ack = recv_packet.decode().split(';')
+                if received_ack[1] == 'fin':
                     break
 
         if writable:
             if received_ack:
-                # print('all packets', packets)
-                # print('received_ack', received_ack)
-                packets.pop(int(received_ack))
+                packets.pop(int(received_ack[1]))
 
             while(data and len(packets) < WINDOW_SIZE): #Wait for ACKs from receiver when sending maximum packets
-                packet = str(seq_num).encode() + b';' + data
+                packet = b'SEQ;' + str(seq_num).encode() + b';' + data
                 packets[seq_num] = packet
                 send_packet(packet)
                 data = file.read(20)
@@ -54,10 +52,8 @@ def transfer_file():
 
                 #timeout for ACK
 
-            if not data:
-                send_packet('fin'.encode())
-
-
+            if not data and len(packets) == 0:
+                send_packet(b'SEQ;fin')
 
     print("------DONE------")
     file.close()

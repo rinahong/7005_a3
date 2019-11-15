@@ -11,31 +11,31 @@ import select
 
 track_seq = 0
 
-TRANS_IP = '192.168.0.3'
-TRANS_PORT = 7005
+PORT_NUMBER = 7006
 
 def udp_receiver():
     sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      # Create a UDP socket object
-    sobj.bind(('', TRANS_PORT))
+    sobj.bind(('', PORT_NUMBER))
     file_name = 'test'
     packet = ''
     with open(file_name, 'wb') as f:
         while True:
             readable, writable, exceptional = select.select([sobj], [sobj], [])
-            #print('readable', readable)
-            #print('writable', writable)
+
             if readable:
                 packet, address = sobj.recvfrom(1024)   # buffer size is 1024 bytes from transmitter
                 print('!!!!!!!!!!!!readable!!!!!!!', packet.decode())
 
                 packet = packet.decode().split(';')
 
-                if packet[0] == "fin":
-                    sobj.sendto(packet[0].encode(), address)
+                if packet[1] == "fin":
+                    sobj.sendto(b'ACK;' + packet[1].encode(), address)
                     f.close()
                     break
                 else:
-                    f.write(packet[1].encode())
+                    #from index 2, all data should be saved
+                    data_to_save = ''.join(packet[2:len(packet)])
+                    f.write(data_to_save.encode())
 
 
 
@@ -45,7 +45,7 @@ def udp_receiver():
                 # RETRUN ACK to network_emulator
                 if(packet):
                     print('------wrtiable=========', packet[0].encode())
-                    sobj.sendto(packet[0].encode(), address)
+                    sobj.sendto(b'ACK;' + packet[1].encode(), address)
                     packet = ''
 
     sobj.close()
