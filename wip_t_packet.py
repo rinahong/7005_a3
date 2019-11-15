@@ -2,11 +2,11 @@
 #!/usr/bin/python3
 
 """
-Transmitter with UDP with GO-BACK-N
+Transmitter with UDP:
 """
 
-import socket
-import select
+import socket, select, pickle
+import Packet from Packet
 
 TRANS_IP = '192.168.0.15'
 TRANS_PORT = 7005
@@ -44,7 +44,7 @@ def transfer_file():
                 packets.pop(int(received_ack[1]))
 
             while(data and len(packets) < WINDOW_SIZE): #Wait for ACKs from receiver when sending maximum packets
-                packet = b'SEQ;' + str(seq_num).encode() + b';' + data
+                packet = Packet('DATA', seq_num) b'SEQ;' + str(seq_num).encode() + b';' + data
                 packets[seq_num] = packet
                 send_packet(packet)
                 data = file.read(20)
@@ -53,7 +53,8 @@ def transfer_file():
                 #timeout for ACK
 
             if not data and len(packets) == 0:
-                send_packet(b'SEQ;fin')
+                packet = Packet('EOT', 'fin')
+                send_packet(pickle.dumps(current_packet)b'SEQ;fin')
 
     print("------DONE------")
     file.close()

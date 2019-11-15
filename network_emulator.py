@@ -6,8 +6,7 @@ netstat -anp --ip   -> checking udp is running or not
 
 """
 
-import socket
-import select
+import socket, select, random
 
 # This should come from user input.
 error_rate = 10
@@ -29,6 +28,9 @@ def emulate_network():
 
         if readable:
             packet, address = sobj.recvfrom(1024)   # buffer size is 1024 bytes from transmitter
+            if discard_packet():
+                continue
+
             packet_type = packet.decode().split(';')[0]
             print("readable address", address)
 
@@ -49,6 +51,9 @@ def emulate_network():
                 sobj.sendto(packet, transmitter_address)
 
     sobj.close()
+
+def discard_packet():
+    return random.randrange(100) < error_rate
 
 if __name__ == '__main__':
     emulate_network()

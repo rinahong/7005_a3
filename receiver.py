@@ -33,9 +33,11 @@ def udp_receiver():
                     f.close()
                     break
                 else:
-                    #from index 2, all data should be saved
-                    data_to_save = ''.join(packet[2:len(packet)])
-                    f.write(data_to_save.encode())
+                    # Check if expected SEQ is returned.
+                    # if packet[1] == expected_seq:
+                        #from index 2, all data should be saved
+                        data_to_save = ''.join(packet[2:len(packet)])
+                        f.write(data_to_save.encode())
 
 
 
@@ -45,7 +47,12 @@ def udp_receiver():
                 # RETRUN ACK to network_emulator
                 if(packet):
                     print('------wrtiable=========', packet[0].encode())
-                    sobj.sendto(b'ACK;' + packet[1].encode(), address)
+                    # TODO Find expected SEQ and send...
+                    # if packet[1] == expected_seq:
+                        sobj.sendto(b'ACK;' + packet[1].encode(), address)
+                    # else:
+                        sobj.sendto(b'ACK;' + expected_seq.encode(), address)
+
                     packet = ''
 
     sobj.close()
