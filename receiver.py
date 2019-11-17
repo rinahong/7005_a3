@@ -17,9 +17,11 @@ def udp_receiver():
     sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      # Create a UDP socket object
     sobj.bind(('', PORT_NUMBER))
     file_name = 'test'
-    packet = ''
+
+    seq_array = []
     with open(file_name, 'wb') as f:
         while True:
+            packet = ''
             readable, writable, exceptional = select.select([sobj], [sobj], [])
 
             if readable:
@@ -33,20 +35,16 @@ def udp_receiver():
                     f.close()
                     break
                 else:
-                    #from index 2, all data should be saved
-                    data_to_save = ''.join(packet[2:len(packet)])
-                    f.write(data_to_save.encode())
-
-
+                    # Check if expected SEQ is returned.
+                    # TODO: save data only if packet[1] == expected_seq:
+                        data_to_save = ''.join(packet[2:len(packet)])
+                        f.write(data_to_save.encode())
 
             if writable:
-                # if expected seq
-                # write data into opened file and send ack back to transmitter
                 # RETRUN ACK to network_emulator
                 if(packet):
                     print('------wrtiable=========', packet[0].encode())
                     sobj.sendto(b'ACK;' + packet[1].encode(), address)
-                    packet = ''
 
     sobj.close()
 
