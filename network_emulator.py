@@ -7,10 +7,12 @@ netstat -anp --ip   -> checking udp is running or not
 """
 
 import socket, select, random
+import address_config as addr
+
 error_rate = None
 
-RECV_ADDRESS = ('192.168.0.16', 7006)
-PORT_NUMBER = 7005
+RECV_ADDRESS = (addr.receiver['ip'], addr.receiver['port'])
+PORT_NUMBER = addr.network_emulator['port']
 
 def emulate_network():
     sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      # Create a UDP socket object

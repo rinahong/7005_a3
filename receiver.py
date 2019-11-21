@@ -7,9 +7,9 @@ netstat -anp --ip   -> checking udp is running or not
 """
 
 import socket, select, log_helper
+import address_config as addr
 
-track_seq = 0
-PORT_NUMBER = 7006
+PORT_NUMBER = addr.receiver['port']
 
 def udp_receiver():
     sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      # Create a UDP socket object

@@ -9,10 +9,12 @@ TODO print out ongoing session with better message, wireshark
 """
 
 import socket, select, time, datetime, log_helper
+import address_config as addr
 from collections import defaultdict
 
-TRANS_IP = '192.168.0.1'
-TRANS_PORT = 7005
+
+TRANS_IP = addr.network_emulator['ip']
+TRANS_PORT = addr.network_emulator['port']
 WINDOW_SIZE = 5
 MAX_RETRANSMISSION = 5
 timer_starts_at = None
