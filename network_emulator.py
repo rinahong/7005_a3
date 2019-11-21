@@ -7,9 +7,7 @@ netstat -anp --ip   -> checking udp is running or not
 """
 
 import socket, select, random
-
-# This should come from user input.
-error_rate = 10
+error_rate = None
 
 RECV_ADDRESS = ('192.168.0.16', 7006)
 PORT_NUMBER = 7005
@@ -45,7 +43,6 @@ def emulate_network():
 
         if writable:
             if packet_type == 'SEQ':
-                # TODO randomly discard per error rate
                 sobj.sendto(packet, RECV_ADDRESS)
             elif packet_type == 'ACK':
                 sobj.sendto(packet, transmitter_address)
@@ -55,5 +52,13 @@ def emulate_network():
 def discard_packet():
     return random.randrange(100) < error_rate
 
+def get_arguments():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("error_rate", help="Error Rate")
+    return parser.parse_args()
+
 if __name__ == '__main__':
+    global error_rate
+    args = get_arguments()
+    error_rate = args.error_rate
     emulate_network()

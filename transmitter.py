@@ -8,9 +8,8 @@ TODO print out ongoing session with better message, wireshark
 
 """
 
-import socket, select, time, datetime
+import socket, select, time, datetime, log_helper
 from collections import defaultdict
-import log_helper
 
 TRANS_IP = '192.168.0.1'
 TRANS_PORT = 7005
@@ -46,9 +45,6 @@ def transfer_file():
 
         if writable:
             if received_ack:
-                # print('all packets', packets)
-                # print('received_ack', received_ack)
-
                 #Slide window when expected ACK is returned
                 if list(packets)[0] == int(received_ack[1]):
                     log_helper.log("YAY~~~ XD ACK is returned! -> " + received_ack[1], False, '')
