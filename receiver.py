@@ -6,19 +6,18 @@ netstat -anp --ip   -> checking udp is running or not
 
 """
 
-import socket
-import select
+import socket, select, log_helper
 
 track_seq = 0
-
 PORT_NUMBER = 7006
 
 def udp_receiver():
     sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      # Create a UDP socket object
     sobj.bind(('', PORT_NUMBER))
+    log_helper.init_log_file('receiver_log.html')
     file_name = 'test'
 
-    seq_array = []
+    expected_seq = 1
     with open(file_name, 'wb') as f:
         while True:
             packet = ''
@@ -32,19 +31,25 @@ def udp_receiver():
 
                 if packet[1] == "fin":
                     sobj.sendto(b'ACK;' + packet[1].encode(), address)
+                    log_helper.log("FIN IS RECIVED FROM THE TRANSMITTER --- TERMINATE THE PROGRAM", False, 'pink')
                     f.close()
                     break
                 else:
-                    # Check if expected SEQ is returned.
-                    # TODO: save data only if packet[1] == expected_seq:
+                    # Save data only if packet has a expected SEQ num
+                    if packet[1] == expected_seq:
+                        log_helper.log("YAY~~~ XD Expected packet is received: " + expected_seq, False, '')
                         data_to_save = ''.join(packet[2:len(packet)])
                         f.write(data_to_save.encode())
+                        expected_seq = packet[1] + 1
+                    else:
+                        log_helper.log("Discard :( " + expected_seq, True, '')
 
             if writable:
-                # RETRUN ACK to network_emulator
+                # Always sends ACK back to transmitter
                 if(packet):
                     print('------wrtiable=========', packet[0].encode())
                     sobj.sendto(b'ACK;' + packet[1].encode(), address)
+                    log_helper.log("ACK: " + packet[1], False, '')
 
     sobj.close()
 
