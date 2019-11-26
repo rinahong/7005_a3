@@ -1,12 +1,15 @@
 #!/usr/bin/python
 
 """
-File transfer TCP Client: send or receive
-netstat -anp --ip   -> checking udp is running or not
+Network Emulator with UDP
+- When a packet is received, check the packet type.
+- When the packet type is "Data", forward the packet to receiver.
+- When the packet type is "ACK", forward the packet to transmitter.
+- Per given error rate from user, Network Emulator has abililty drop the packet randomly.
 
 """
 
-import socket, select, random
+import socket, select, random, argparse, pickle
 import address_config as addr
 
 error_rate = None
@@ -18,36 +21,48 @@ def emulate_network():
     sobj = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)      # Create a UDP socket object
     sobj.bind(('', PORT_NUMBER))
 
+    print("Bind to", sobj)
+
     transmitter_EOT = False
     receiver_EOT = False
 
     while not transmitter_EOT or not receiver_EOT :
         readable, writable, exceptional = select.select([sobj], [sobj], [])
         packet_type = ''
-        packet = ''
+        recv_packet = ''
+        loaded_packet = ''
+        send_to_address = ''
 
         if readable:
-            packet, address = sobj.recvfrom(1024)   # buffer size is 1024 bytes from transmitter
-            if discard_packet():
-                continue
+            recv_packet, address = sobj.recvfrom(1024)   # buffer size is 1024 bytes from transmitter
 
-            packet_type = packet.decode().split(';')[0]
-            print("readable address", address)
+            if recv_packet:
+                loaded_packet = pickle.loads(recv_packet)
+                print("recv_packet", pickle.loads(recv_packet))
 
-            #TODO refactor this....
-            if packet_type == 'SEQ':
-                transmitter_address = address
-                if packet.decode().split(';')[1] == 'fin':
-                    transmitter_EOT = True
-            elif packet_type == 'ACK':
-                if packet.decode().split(';')[1] == 'fin':
-                    receiver_EOT = True
+                if discard_packet():
+                    print("---DISCARD---", loaded_packet)
+                    continue
 
-        if writable:
-            if packet_type == 'SEQ':
-                sobj.sendto(packet, RECV_ADDRESS)
-            elif packet_type == 'ACK':
-                sobj.sendto(packet, transmitter_address)
+
+                packet_type = loaded_packet['packet_type']
+
+                if packet_type == 'DATA':
+                    transmitter_address = address
+                    if loaded_packet['seq'] == 'fin':
+                        print("Received FIN ACK from Transmitter")
+                        transmitter_EOT = True
+                elif packet_type == 'ACK':
+                    if loaded_packet['ack'] == 'fin':
+                        print("Received FIN ACK from Receiver")
+                        receiver_EOT = True
+
+        if writable and loaded_packet:
+            send_to_address = RECV_ADDRESS if packet_type == 'DATA' else transmitter_address
+            sobj.sendto(recv_packet, send_to_address)
+
+        if transmitter_EOT and receiver_EOT:
+            print("Both transmitter and receiver sent FIN ACK successfully. Terminate the program")
 
     sobj.close()
 
@@ -55,12 +70,12 @@ def discard_packet():
     return random.randrange(100) < error_rate
 
 def get_arguments():
+    global error_rate
     parser = argparse.ArgumentParser()
     parser.add_argument("error_rate", help="Error Rate")
-    return parser.parse_args()
+    error_rate = int(parser.parse_args().error_rate)
 
 if __name__ == '__main__':
-    global error_rate
-    args = get_arguments()
-    error_rate = args.error_rate
+    get_arguments()
     emulate_network()
+ 
